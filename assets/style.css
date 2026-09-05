@@ -1,0 +1,238 @@
+/* ==========================================================
+   Declan McGrath — personal site
+   A quiet, book-like design: warm paper, ink text, one accent.
+   ========================================================== */
+
+:root {
+  --paper: #faf7f2;
+  --paper-raised: #ffffff;
+  --ink: #1f1d1a;
+  --ink-soft: #57534b;
+  --ink-faint: #8a857b;
+  --accent: #7d2e2b;         /* oxblood */
+  --accent-soft: #a05550;
+  --rule: #e4ddd2;
+  --rule-strong: #cfc6b8;
+  --max-width: 44rem;
+  --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #191714;
+    --paper-raised: #211f1b;
+    --ink: #e8e3da;
+    --ink-soft: #b3ac9f;
+    --ink-faint: #7d776c;
+    --accent: #d08a80;
+    --accent-soft: #b06f66;
+    --rule: #35312b;
+    --rule-strong: #4a453c;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- layout ---------- */
+
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.4rem;
+}
+
+main.wrap { padding-top: 2.8rem; padding-bottom: 4.5rem; }
+
+/* ---------- header / nav ---------- */
+
+header {
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.header-inner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  padding-top: 1.6rem;
+  padding-bottom: 1.2rem;
+}
+
+.site-name {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.site-name:hover { color: var(--accent); }
+
+nav { display: flex; flex-wrap: wrap; gap: 1.15rem; }
+
+nav a {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding-bottom: 0.15rem;
+  border-bottom: 1.5px solid transparent;
+}
+
+nav a:hover { color: var(--accent); }
+nav a.current { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-size: 2.3rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 2.8rem 0 1rem;
+}
+
+h2:first-child { margin-top: 0; }
+
+h3 { font-size: 1.15rem; font-weight: 600; margin: 1.6rem 0 0.4rem; }
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+em { font-style: italic; }
+
+hr { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+
+.lede {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  margin-bottom: 1.6rem;
+}
+
+.muted { color: var(--ink-faint); }
+.small { font-size: 0.9rem; }
+
+/* ---------- home page hero ---------- */
+
+.hero {
+  display: flex;
+  gap: 2.2rem;
+  align-items: flex-start;
+  margin-bottom: 2.6rem;
+}
+
+.hero-text { flex: 1; min-width: 0; }
+
+.hero .role {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  margin-bottom: 1.2rem;
+}
+
+.portrait {
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--rule-strong);
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .hero { flex-direction: column-reverse; gap: 1.4rem; }
+  .portrait { width: 120px; height: 120px; }
+  h1 { font-size: 1.9rem; }
+}
+
+/* ---------- contact row ---------- */
+
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  margin: 1.4rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+
+.contact a { color: var(--ink-soft); }
+.contact a:hover { color: var(--accent); text-decoration: none; }
+.contact .label { color: var(--ink-faint); margin-right: 0.3rem; }
+
+/* ---------- entry lists (papers, notes, teaching) ---------- */
+
+.entry {
+  padding: 1.15rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.entry:last-child { border-bottom: none; }
+
+.entry .title { font-weight: 600; font-size: 1.08rem; }
+.entry .meta {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  margin-top: 0.15rem;
+}
+.entry .desc { margin-top: 0.45rem; margin-bottom: 0; color: var(--ink-soft); }
+
+.entry .links {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+.entry .links a { margin-right: 1rem; }
+
+/* ---------- footer ---------- */
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding: 1.6rem 0 2.4rem;
+}
+
+footer .wrap {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+footer a { color: var(--ink-faint); }
+footer a:hover { color: var(--accent); }
