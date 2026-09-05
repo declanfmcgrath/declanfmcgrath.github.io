@@ -197,17 +197,19 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
 }
 
 .portrait {
-  width: 148px;
-  height: 148px;
-  border-radius: 50%;
+  width: 180px;
+  aspect-ratio: 3 / 4;
+  height: auto;
   object-fit: cover;
+  border-radius: 10px;
   border: 1px solid var(--rule-strong);
   flex-shrink: 0;
+  margin-top: 0.4rem;
 }
 
 @media (max-width: 560px) {
   .hero { flex-direction: column-reverse; gap: 1.4rem; }
-  .portrait { width: 120px; height: 120px; }
+  .portrait { width: 140px; margin-top: 0; }
   h1 { font-size: 1.9rem; }
 }
 
