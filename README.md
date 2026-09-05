@@ -1,28 +1,16 @@
-# Personal academic website
+# declanfmcgrath.github.io
 
-A hand-built static site, hosted on GitHub Pages.
+Source for my personal site.
 
-## How it works
+Notes to self:
 
-- `config.js` — the one file to edit for site-wide changes: your name, email,
-  links, and **which sections are switched on**. Set e.g. `teaching: true`
-  and the Teaching link appears in the navigation on every page.
-- `index.html`, `papers.html`, `notes.html`, `teaching.html`, `cv.html` — the
-  pages. Each contains commented-out templates: copy one, remove the
-  `<!-- -->` markers, and fill it in.
-- `assets/style.css` — the design (colours at the top under `:root`).
-- `assets/site.js` — builds the shared header/footer; you shouldn't need to
-  touch it.
-
-## Adding files
-
-- Put your CV at `files/cv.pdf` (the CV page links to it).
-- Put a photo at `assets/portrait.jpg` (the home page shows it automatically;
-  without one, the space simply collapses).
-- Put paper/note PDFs in `files/` and link them from the entry templates.
-
-## Editing
-
-Edit files directly on github.com (press `.` in the repo for a full editor,
-or click any file → pencil icon), or clone the repo and push. Changes go
-live at your `https://<username>.github.io` address within a minute or two.
+- `config.js` has my name, email, links and the section toggles. Flip
+  `teaching: true` when term starts and the nav updates on every page.
+- The pages are plain HTML (index, papers, notes, teaching, cv, misc).
+  Each one has a commented-out template to copy when adding an entry.
+- Colours are at the top of `assets/style.css`. `assets/site.js` builds the
+  header and footer, leave it alone.
+- PDFs go in `files/` (cv.pdf, msc-thesis.pdf). A photo at
+  `assets/portrait.jpg` shows on the home page if present.
+- Edit on github.com with the pencil icon, or clone and push. Live in a
+  minute or two. If the site looks stale it's the browser cache, Cmd+Shift+R.
