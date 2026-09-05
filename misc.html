@@ -27,11 +27,402 @@
 
   -->
 
-  <div class="entry">
-    <p class="desc muted">Nothing here yet.</p>
+  <h2>Holonomy playdough</h2>
+
+  <p class="desc" style="color: var(--ink-soft);">Drag to rotate, or fling
+    it to leave it spinning. Drag the circled vertices to reshape the loop.
+    In <em>sculpt</em> mode, drag the surface outward or inward to model it
+    like clay.</p>
+
+  <div class="toy">
+    <div class="toy-row">
+      <button id="m-rotate" class="toy-btn on">rotate / loop</button>
+      <button id="m-sculpt" class="toy-btn">sculpt</button>
+    </div>
+    <div class="toy-row">
+      <button class="toy-btn" data-preset="round">round</button>
+      <button class="toy-btn" data-preset="egg">egg</button>
+      <button class="toy-btn" data-preset="dumbbell">dumbbell</button>
+      <button class="toy-btn" data-preset="crater">crater</button>
+    </div>
+    <canvas id="toy-c"></canvas>
+    <p class="toy-caption">Signed rotation on return: <b>&ndash;</b><br>
+      A tangent vector carried around the loop by parallel transport comes back
+      rotated, by the curvature the loop encloses. However you sculpt the
+      surface, the total curvature is fixed at 4&pi; (Gauss&ndash;Bonnet),
+      so you can only move it around.</p>
   </div>
 
 </main>
+
+<style>
+  .toy { margin: 1.2rem 0 0; }
+  .toy canvas { display: block; margin: 0 auto; cursor: grab; max-width: 100%;
+                touch-action: none; }
+  .toy-row { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;
+             margin: 0 0 0.55rem; }
+  .toy-btn {
+    font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.04em;
+    border: 1px solid var(--rule-strong); background: none; color: var(--ink-soft);
+    border-radius: 999px; padding: 0.28rem 0.85rem; cursor: pointer;
+  }
+  .toy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .toy-btn.on { background: var(--accent); border-color: var(--accent);
+                color: var(--paper); }
+  .toy-caption {
+    font-family: var(--sans); font-size: 0.85rem; color: var(--ink-faint);
+    text-align: center; max-width: 33rem; margin: 0.6rem auto 0;
+  }
+  .toy-caption b { color: var(--accent); font-variant-numeric: tabular-nums; }
+</style>
+
+<script>
+(function(){
+const cv=document.getElementById('toy-c'), ctx=cv.getContext('2d');
+const W=600, H=560, dpr=Math.min(2,window.devicePixelRatio||1);
+cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+ctx.scale(dpr,dpr);
+const CX=W/2, CY=H/2-4, SC=150;
+
+// ---------- palette (follows the site theme) ----------
+function isDark(){
+  const t=document.documentElement.dataset.theme;
+  if(t==='dark')return true;
+  if(t==='light')return false;
+  return matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function pal(){
+  return isDark()?{
+    ink:'#e8e3da', ox:'#d08a80', back:'#6a645a',
+    c0:[52,48,42], c1:[112,105,94], shadow:'rgba(0,0,0,0.32)'
+  }:{
+    ink:'#1f1d1a', ox:'#7d2e2b', back:'#a49d90',
+    c0:[176,168,150], c1:[248,244,237], shadow:'rgba(30,28,25,0.13)'
+  };
+}
+let P=pal();
+
+// ---------- linear algebra ----------
+function matMul(A,B){const C=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)C[i][j]+=A[i][k]*B[k][j];
+  return C;}
+function matVec(A,v){return [
+  A[0][0]*v[0]+A[0][1]*v[1]+A[0][2]*v[2],
+  A[1][0]*v[0]+A[1][1]*v[1]+A[1][2]*v[2],
+  A[2][0]*v[0]+A[2][1]*v[1]+A[2][2]*v[2]];}
+function matT(A){return [[A[0][0],A[1][0],A[2][0]],[A[0][1],A[1][1],A[2][1]],[A[0][2],A[1][2],A[2][2]]];}
+function rotX(a){const c=Math.cos(a),s=Math.sin(a);return [[1,0,0],[0,c,-s],[0,s,c]];}
+function rotZ(a){const c=Math.cos(a),s=Math.sin(a);return [[c,-s,0],[s,c,0],[0,0,1]];}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function norm(a){const n=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/n,a[1]/n,a[2]/n];}
+function slerp(P0,P1,t){
+  const w=Math.acos(Math.min(1,Math.max(-1,dot(P0,P1))));
+  if(w<1e-6)return P0.slice();
+  const s=Math.sin(w);
+  return [(Math.sin((1-t)*w)*P0[0]+Math.sin(t*w)*P1[0])/s,
+          (Math.sin((1-t)*w)*P0[1]+Math.sin(t*w)*P1[1])/s,
+          (Math.sin((1-t)*w)*P0[2]+Math.sin(t*w)*P1[2])/s];
+}
+
+// ---------- shape: radial graph r(u)·u over the unit sphere ----------
+let base=()=>1;
+let bumps=[];               // {c:[unit vec], amp, s}
+function rOf(u){
+  let r=base(u);
+  for(const b of bumps){
+    const a=Math.acos(Math.min(1,Math.max(-1,dot(u,b.c))));
+    r+=b.amp*Math.exp(-(a*a)/(b.s*b.s));
+  }
+  return Math.min(1.75,Math.max(0.45,r));
+}
+function surf(u){const r=rOf(u);return [r*u[0],r*u[1],r*u[2]];}
+function tangentBasis(u){
+  const a=Math.abs(u[2])<0.9?[0,0,1]:[1,0,0];
+  const e1=norm(cross(u,a)), e2=cross(u,e1);
+  return [e1,e2];
+}
+function normalAt(u){
+  const h=0.004, be=tangentBasis(u), e1=be[0], e2=be[1];
+  const p=surf(u);
+  const p1=surf(norm([u[0]+h*e1[0],u[1]+h*e1[1],u[2]+h*e1[2]]));
+  const p2=surf(norm([u[0]+h*e2[0],u[1]+h*e2[1],u[2]+h*e2[2]]));
+  let n=norm(cross([p1[0]-p[0],p1[1]-p[1],p1[2]-p[2]],[p2[0]-p[0],p2[1]-p[1],p2[2]-p[2]]));
+  if(dot(n,u)<0)n=[-n[0],-n[1],-n[2]];
+  return n;
+}
+
+// ---------- view ----------
+let Rv=rotX(14*Math.PI/180);
+function proj(Pt){const q=matVec(Rv,Pt);return [CX+SC*q[0],CY-SC*q[2],q[1]];}
+function frontU(u){const nv=matVec(Rv,normalAt(u));return nv[1]<0.02;}
+function raycast(sx,sy){
+  const X=(sx-CX)/SC, Z=(CY-sy)/SC, RT=matT(Rv);
+  let prev=null;
+  for(let y=-2;y<=2;y+=0.02){
+    const w=matVec(RT,[X,y,Z]);
+    const wl=Math.hypot(w[0],w[1],w[2]);
+    if(wl<1e-6)continue;
+    const f=wl-rOf(norm(w));
+    if(prev!==null&&prev>0&&f<=0)return norm(w);
+    prev=f;
+  }
+  return null;
+}
+
+// ---------- loop ----------
+let V=[[0,0,1],
+       norm([-0.62,-0.55,0.30]),
+       norm([ 0.60,-0.55,0.32])];
+function legSample(k,t){return slerp(V[k],V[(k+1)%3],t);}
+
+// ---------- painter's-algorithm mesh ----------
+const NT=40, NP=56;
+const LGT=norm([-0.45,-0.5,0.62]);   // view-space light
+function shadeColor(t){
+  const r=Math.round(P.c0[0]+(P.c1[0]-P.c0[0])*t),
+        g=Math.round(P.c0[1]+(P.c1[1]-P.c0[1])*t),
+        b=Math.round(P.c0[2]+(P.c1[2]-P.c0[2])*t);
+  return 'rgb('+r+','+g+','+b+')';
+}
+function drawBody(){
+  const vs=[];
+  for(let i=0;i<=NT;i++){
+    const th=i/NT*Math.PI, st=Math.sin(th), ct=Math.cos(th);
+    const row=[];
+    for(let j=0;j<=NP;j++){
+      const ph=j/NP*2*Math.PI;
+      const u=[st*Math.cos(ph),st*Math.sin(ph),ct];
+      row.push(matVec(Rv,surf(u)));
+    }
+    vs.push(row);
+  }
+  let maxY=-1e9,minX=1e9,maxX=-1e9;
+  for(const row of vs)for(const q of row){
+    const sy=CY-SC*q[2], sx=CX+SC*q[0];
+    if(sy>maxY)maxY=sy;
+    if(sx<minX)minX=sx; if(sx>maxX)maxX=sx;
+  }
+  const shW=(maxX-minX)*0.33, shY=maxY+14;
+  let g=ctx.createRadialGradient(CX,shY,3,CX,shY,shW);
+  g.addColorStop(0,P.shadow);g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.save();ctx.translate(CX,shY);ctx.scale(1,0.22);ctx.translate(-CX,-shY);
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(CX,shY,shW,0,7);ctx.fill();ctx.restore();
+  const faces=[];
+  for(let i=0;i<NT;i++)for(let j=0;j<NP;j++){
+    const a=vs[i][j],b=vs[i+1][j],c=vs[i+1][j+1],d=vs[i][j+1];
+    faces.push({a,b,c,d,depth:(a[1]+b[1]+c[1]+d[1])/4});
+  }
+  faces.sort((p,q)=>q.depth-p.depth);      // far first
+  for(const f of faces){
+    let n=cross([f.c[0]-f.a[0],f.c[1]-f.a[1],f.c[2]-f.a[2]],
+                [f.d[0]-f.b[0],f.d[1]-f.b[1],f.d[2]-f.b[2]]);
+    n=norm(n);
+    if(n[1]>0)n=[-n[0],-n[1],-n[2]];
+    const t=Math.max(0,dot(n,LGT))*0.88+0.12;
+    const col=shadeColor(Math.min(1,t));
+    ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineWidth=0.8;
+    ctx.beginPath();
+    ctx.moveTo(CX+SC*f.a[0],CY-SC*f.a[2]);
+    ctx.lineTo(CX+SC*f.b[0],CY-SC*f.b[2]);
+    ctx.lineTo(CX+SC*f.c[0],CY-SC*f.c[2]);
+    ctx.lineTo(CX+SC*f.d[0],CY-SC*f.d[2]);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
+
+// ---------- curves & vectors ----------
+function drawCurve(sample,n,frontStyle,backStyle,wF,wB){
+  for(const front of [false,true]){
+    ctx.beginPath(); let started=false;
+    for(let i=0;i<=n;i++){
+      const u=sample(i/n), s2=proj(surf(u));
+      if(frontU(u)===front){
+        if(!started){ctx.moveTo(s2[0],s2[1]);started=true;}
+        else ctx.lineTo(s2[0],s2[1]);
+      } else started=false;
+    }
+    ctx.strokeStyle=front?frontStyle:backStyle;
+    ctx.lineWidth=front?wF:wB;
+    ctx.setLineDash(front?[]:[3,4]);
+    ctx.lineCap='round';
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+function drawVec(u,v,color,len){
+  if(!frontU(u))return;
+  const Pt=surf(u);
+  const s0=proj(Pt), s1=proj([Pt[0]+len*v[0],Pt[1]+len*v[1],Pt[2]+len*v[2]]);
+  const ang=Math.atan2(s1[1]-s0[1],s1[0]-s0[0]);
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.moveTo(s0[0],s0[1]);ctx.lineTo(s1[0],s1[1]);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(s1[0],s1[1]);
+  ctx.lineTo(s1[0]-9*Math.cos(ang-0.42),s1[1]-9*Math.sin(ang-0.42));
+  ctx.lineTo(s1[0]-9*Math.cos(ang+0.42),s1[1]-9*Math.sin(ang+0.42));
+  ctx.closePath();ctx.fill();
+}
+function transportLeg(k,v,stations){
+  const M=300;
+  let nextSt=0;
+  for(let i=1;i<=M;i++){
+    const t=i/M, u=legSample(k,t), n=normalAt(u);
+    const d=dot(v,n);
+    v=norm([v[0]-d*n[0],v[1]-d*n[1],v[2]-d*n[2]]);
+    while(nextSt<stations.length&&t>=stations[nextSt]){
+      drawVec(u,v,P.ox,0.19); nextSt++;
+    }
+  }
+  return v;
+}
+
+// ---------- render ----------
+function render(){
+  P=pal();
+  ctx.clearRect(0,0,W,H);
+  drawBody();
+  for(let k=0;k<3;k++)drawCurve(t=>legSample(k,t),140,P.ink,P.back,1.8,1.1);
+  const eps=0.004;
+  const q0=surf(legSample(0,0)), q1=surf(legSample(0,eps));
+  let v=[q1[0]-q0[0],q1[1]-q0[1],q1[2]-q0[2]];
+  { const n=normalAt(V[0]), d=dot(v,n);
+    v=norm([v[0]-d*n[0],v[1]-d*n[1],v[2]-d*n[2]]); }
+  const vInit=v.slice();
+  v=transportLeg(0,v,[0.25,0.55,0.85]);
+  v=transportLeg(1,v,[0.25,0.55,0.85]);
+  v=transportLeg(2,v,[0.35,0.68]);
+  const n0=normalAt(V[0]);
+  { const d=dot(v,n0); v=norm([v[0]-d*n0[0],v[1]-d*n0[1],v[2]-d*n0[2]]); }
+  drawVec(V[0],vInit,P.ink,0.22);
+  drawVec(V[0],v,P.ox,0.22);
+  for(const u of V){
+    const s2=proj(surf(u));
+    ctx.fillStyle=frontU(u)?P.ink:P.back;
+    ctx.beginPath();ctx.arc(s2[0],s2[1],4,0,7);ctx.fill();
+    if(frontU(u)){
+      ctx.strokeStyle=P.ox;ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(s2[0],s2[1],9,0,7);ctx.stroke();
+    }
+  }
+  const sgn=Math.sign(dot(cross(vInit,v),n0))||1;
+  const ang=sgn*Math.acos(Math.min(1,Math.max(-1,dot(vInit,v))))*180/Math.PI;
+  document.querySelector('.toy-caption b').textContent=(ang>=0?'+':'')+ang.toFixed(1)+'°';
+}
+
+// ---------- interaction ----------
+let mode='rotate';
+let drag=null, last=null, vel=[0,0], spinning=false, sculptBump=null;
+function setMode(m){
+  mode=m;
+  document.getElementById('m-rotate').classList.toggle('on',m==='rotate');
+  document.getElementById('m-sculpt').classList.toggle('on',m==='sculpt');
+  cv.style.cursor=m==='sculpt'?'crosshair':'grab';
+}
+document.getElementById('m-rotate').onclick=function(){setMode('rotate');};
+document.getElementById('m-sculpt').onclick=function(){setMode('sculpt');};
+
+function pickVertex(x,y){
+  for(let k=0;k<3;k++){
+    const s2=proj(surf(V[k]));
+    if(frontU(V[k])&&Math.hypot(s2[0]-x,s2[1]-y)<16)return k;
+  }
+  return -1;
+}
+cv.addEventListener('pointerdown',function(e){
+  spinning=false; vel=[0,0];
+  const rect=cv.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  if(mode==='rotate'){
+    const k=pickVertex(x,y);
+    drag=k>=0?{type:'vertex',k:k}:{type:'view'};
+  }else{
+    const u0=raycast(x,y);
+    if(u0){
+      sculptBump={c:u0, amp:0, s:0.5};
+      bumps.push(sculptBump);
+      if(bumps.length>24)bumps.shift();
+      drag={type:'sculpt'};
+    }else drag={type:'view'};
+  }
+  last=[e.clientX,e.clientY];
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove',function(e){
+  if(!drag)return;
+  const rect=cv.getBoundingClientRect();
+  const dxp=e.clientX-last[0], dyp=e.clientY-last[1];
+  if(drag.type==='view'){
+    const dx=dxp/SC, dy=dyp/SC;
+    Rv=matMul(rotX(dy),Rv);
+    Rv=matMul(Rv,rotZ(dx));
+    vel=[0.8*vel[0]+0.2*dx, 0.8*vel[1]+0.2*dy];
+  }else if(drag.type==='vertex'){
+    const u=raycast(e.clientX-rect.left,e.clientY-rect.top);
+    if(u)V[drag.k]=u;
+  }else if(drag.type==='sculpt'&&sculptBump){
+    const s2=proj(surf(sculptBump.c));
+    const rd=norm([s2[0]-CX,s2[1]-CY,0]);
+    const da=(dxp*rd[0]+dyp*rd[1])*0.006;
+    sculptBump.amp=Math.min(0.85,Math.max(-0.55,sculptBump.amp+da));
+  }
+  last=[e.clientX,e.clientY];
+  render();
+});
+cv.addEventListener('pointerup',function(e){
+  if(drag&&drag.type==='view'&&Math.hypot(vel[0],vel[1])>0.004){
+    spinning=true; requestAnimationFrame(spin);
+  }
+  drag=null; sculptBump=null;
+});
+function spin(){
+  if(!spinning)return;
+  Rv=matMul(rotX(vel[1]),Rv);
+  Rv=matMul(Rv,rotZ(vel[0]));
+  vel[0]*=0.995; vel[1]*=0.995;
+  render();
+  if(Math.hypot(vel[0],vel[1])<0.0006){spinning=false;return;}
+  requestAnimationFrame(spin);
+}
+
+// ---------- presets ----------
+const presets={
+  round:function(){ base=function(){return 1;}; bumps=[];
+    V=[[0,0,1],norm([-0.62,-0.55,0.30]),norm([0.60,-0.55,0.32])]; },
+  egg:function(){ base=function(u){return 1+0.2*u[2]+0.14*u[2]*u[2];}; bumps=[];
+    V=[[0,0,1],norm([-0.62,-0.55,0.30]),norm([0.60,-0.55,0.32])]; },
+  dumbbell:function(){
+    base=function(u){return 1-0.46*Math.exp(-(u[2]*u[2])/(0.52*0.52));}; bumps=[];
+    const lat=0.22;
+    V=[0,1,2].map(function(k){
+      const ph=(-90+120*k)*Math.PI/180;
+      return [Math.cos(ph)*Math.cos(lat),Math.sin(ph)*Math.cos(lat),Math.sin(lat)];
+    }); },
+  crater:function(){ base=function(){return 1;};
+    const c=norm([0.55,-0.45,0.7]);
+    bumps=[{c:c, amp:-0.58, s:0.5}];
+    const be=tangentBasis(c), e1=be[0], e2=be[1], a=0.78;
+    V=[0,1,2].map(function(k){
+      const ph=2*Math.PI*k/3+0.5;
+      return norm([
+        Math.cos(a)*c[0]+Math.sin(a)*(Math.cos(ph)*e1[0]+Math.sin(ph)*e2[0]),
+        Math.cos(a)*c[1]+Math.sin(a)*(Math.cos(ph)*e1[1]+Math.sin(ph)*e2[1]),
+        Math.cos(a)*c[2]+Math.sin(a)*(Math.cos(ph)*e1[2]+Math.sin(ph)*e2[2])]);
+    }); },
+};
+document.querySelectorAll('[data-preset]').forEach(function(b){
+  b.onclick=function(){spinning=false; presets[b.dataset.preset](); render();};
+});
+
+// re-render when the site theme changes
+new MutationObserver(function(){render();})
+  .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+try{
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){render();});
+}catch(e){}
+
+render();
+})();
+</script>
 
 <script src="assets/site.js"></script>
 </body>
