@@ -7,8 +7,8 @@ const SITE = {
   // Short line under your name on the home page
   tagline: "PhD student in Pure Mathematics, King's College London",
 
-  // Set to "" to hide; fill in when you're ready to show it publicly
-  email: "",
+  // Set to "" to hide
+  email: "dfm25@ic.ac.uk",
 
   // Set to "" to hide a link
   github: "declanfmcgrath",        // just the username
