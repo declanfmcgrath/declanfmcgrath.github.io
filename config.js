@@ -22,7 +22,7 @@ const SITE = {
   // ------------------------------------------------------------
   sections: {
     research: true,   // part of the home page
-    papers:   true,   // papers.html
+    papers:   false,  // papers.html — switch on with your first preprint
     notes:    true,   // notes.html
     teaching: false,  // teaching.html — switch on once you start TAing
     cv:       true,   // cv.html
