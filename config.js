@@ -8,7 +8,7 @@ const SITE = {
   tagline: "PhD student in Pure Mathematics, King's College London",
 
   // Set to "" to hide
-  email: "dfm25@ic.ac.uk",
+  email: "declan.mcgrath@kcl.ac.uk",
 
   // Set to "" to hide a link
   github: "declanfmcgrath",        // just the username
