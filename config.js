@@ -26,7 +26,7 @@ const SITE = {
     notes:    true,   // notes.html
     teaching: true,   // teaching.html
     cv:       true,   // cv.html
-    misc:     true,   // misc.html — anything that fits nowhere else
+    misc:     false,  // misc.html — anything that fits nowhere else
   },
 };
 
