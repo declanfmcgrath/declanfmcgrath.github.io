@@ -24,7 +24,7 @@ const SITE = {
     research: true,   // part of the home page
     papers:   false,  // papers.html — switch on with your first preprint
     notes:    true,   // notes.html
-    teaching: false,  // teaching.html — switch on once you start TAing
+    teaching: true,   // teaching.html
     cv:       true,   // cv.html
     misc:     true,   // misc.html — anything that fits nowhere else
   },
