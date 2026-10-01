@@ -6,8 +6,8 @@
     { key: "home",     label: "About",    href: "index.html",    always: true },
     { key: "papers",   label: "Papers",   href: "papers.html" },
     { key: "notes",    label: "Notes",    href: "notes.html" },
-    { key: "teaching", label: "Teaching", href: "teaching.html" },
     { key: "cv",       label: "CV",       href: "cv.html" },
+    { key: "teaching", label: "Teaching", href: "teaching.html" },
     { key: "misc",     label: "Misc",     href: "misc.html" },
   ];
 
