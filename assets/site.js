@@ -5,7 +5,7 @@
   const NAV_ITEMS = [
     { key: "home",     label: "About",    href: "index.html",    always: true },
     { key: "papers",   label: "Papers",   href: "papers.html" },
-    { key: "notes",    label: "Notes",    href: "notes.html" },
+    { key: "notes",    label: "Writing & Talks", href: "notes.html" },
     { key: "cv",       label: "CV",       href: "cv.html" },
     { key: "teaching", label: "Teaching", href: "teaching.html" },
     { key: "misc",     label: "Misc",     href: "misc.html" },
